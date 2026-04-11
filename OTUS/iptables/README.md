@@ -81,22 +81,32 @@ sudo systemctl restart knockd
 
 Теперь переходим на centralRouter (192.168.255.2). Сначала пробуем подключиться напрямую — соединение должно «зависнуть» или прерваться.
 
-![alt text](image-5.png)
+Дорабатываем команду для временного открытыя порта 
 
+```
+/bin/sh -c '/sbin/iptables -I INPUT -p tcp -s %IP% --dport 22 -j ACCEPT; echo "/sbin/iptables -D INPUT -p tcp -s %IP% --dport 22 -j ACCEPT" | /usr/bin/at now + 2 minutes'
+```
+
+![alt text](image-9.png)
 
 Затем устанавливаем клиент для стука (если его нет) и выполняем «стук»:
 
 sudo apt install knockd -y
-knock 192.168.255.1 7000 8000 9000
 
-![alt text](image-7.png)
+
+![alt text](image-10.png)
+
+![alt text](image-11.png)
+
+![alt text](image-12.png)
 
 или
 
+```
 nmap -Pn --host-timeout 201 --max-retries 0 -p 7000 192.168.255.1 #прослушивание порта 7000
 nmap -Pn --host-timeout 201 --max-retries 0 -p 8000 192.168.255.1 #прослушивание порта 8000
 nmap -Pn --host-timeout 201 --max-retries 0 -p 9000 192.168.255.1 #прослушивание порта 9000
-
+```
 После этого сразу пробуем SSH:
 
 ssh vagrant@192.168.255.1
@@ -109,4 +119,4 @@ ssh vagrant@192.168.255.1
 
 ![alt text](image-8.png)
 
-- Безопасность: Чтобы доступ закрылся автоматически, в knockd.conf часто используют одну секцию со временем ожидания (stop_command и cmd_timeout), но ручное закрытие (обратная последовательность) — более надежный вариант для лабораторной работы.
+- Безопасность: Чтобы доступ закрылся автоматически, в knockd.conf часто используют одну секцию со временем ожидания (stop_command и cmd_timeout)
