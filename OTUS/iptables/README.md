@@ -88,18 +88,25 @@ sudo systemctl restart knockd
 
 sudo apt install knockd -y
 knock 192.168.255.1 7000 8000 9000
+
+![alt text](image-7.png)
+
 или
 
 nmap -Pn --host-timeout 201 --max-retries 0 -p 7000 192.168.255.1 #прослушивание порта 7000
 nmap -Pn --host-timeout 201 --max-retries 0 -p 8000 192.168.255.1 #прослушивание порта 8000
-nmap -Pn --host-timeout 201 --max-retries 0 -p 9000 192.168.255.1 #прослушивание порта 97000
+nmap -Pn --host-timeout 201 --max-retries 0 -p 9000 192.168.255.1 #прослушивание порта 9000
 
 После этого сразу пробуем SSH:
 
 ssh vagrant@192.168.255.1
 
-![alt text](image-6.png)
+
 
 # Резюме для проверки:
+
 - Логи: На inetRouter можно смотреть tail -f /var/log/syslog, чтобы видеть, как knockd распознает последовательность.
+
+![alt text](image-8.png)
+
 - Безопасность: Чтобы доступ закрылся автоматически, в knockd.conf часто используют одну секцию со временем ожидания (stop_command и cmd_timeout), но ручное закрытие (обратная последовательность) — более надежный вариант для лабораторной работы.
