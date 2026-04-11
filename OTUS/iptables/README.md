@@ -120,3 +120,88 @@ ssh vagrant@192.168.255.1
 ![alt text](image-8.png)
 
 - Безопасность: Чтобы доступ закрылся автоматически, в knockd.conf часто используют одну секцию со временем ожидания (stop_command и cmd_timeout)
+
+
+# Добавить inetRouter2, который виден(маршрутизируется (host-only тип сети для виртуалки)) с хоста или форвардится порт через локалхост.
+
+Добавляем хост в наш vagrantfile и запускаем с host-only тип сети для виртуалки
+
+![alt text](image-13.png)
+
+
+# Нужно получить такую схему: centralServer выходит в интернет по умолчанию через inetRouter
+
+- ставим дефолт через inetRouter
+```
+ip route del default via 10.0.2.2 dev eth0 proto dhcp src 10.0.2.15 metric 100
+ip route add default via 192.168.255.2 dev eth1
+traceroute 8.8.8.8
+```
+
+
+![alt text](image-16.png)
+
+
+Видим что нет интернета, добавляем правило нат для сети 192.168.255.0/30
+
+```
+iptables -t nat -A POSTROUTING -s 192.168.255.0/30 -o eth0 -j MASQUERADE 
+- Главное действие. Роутер заменяет внутренний IP-адрес устройства на свой внешний адрес eth0. Это позволяет устройствам из локальной сети выходить в интернет, используя один публичный IP роутера.
+
+iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+- Разрешить это действие. Без этой команды роутер просто отбросит чужой пакет из внутренней сети.
+
+ iptables -A FORWARD -i eth0 -o eth1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+- Этим правилом мы закрываем сеть от нежелательных входящих соединений извне, разрешая только «ответные» данные.
+```
+
+![alt text](image-17.png)
+
+
+Проверяем доступ к inetRouter2 через host only
+
+![alt text](image-18.png)
+
+# Запустить nginx на centralServer.
+
+sudo apt update
+sudo apt install nginx -y
+
+sudo systemctl status nginx
+
+curl http://127.0.0.1
+
+
+![alt text](image-19.png)
+
+
+# проброс порта на inetRouter2.
+
+Логика такая: на inetRouter2 входящий трафик на 8080 должен перенаправляться на centralServer:80
+
+inetRouter2:
+
+```
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 8080 -j DNAT --to-destination 192.168.50.11:80
+добавляет правило перенаправления входящих TCP-пакетов, которые приходят на порт 8080. Она меняет адрес назначения на 192.168.50.11:80, то есть отправляет трафик на внутренний сервер
+
+sudo iptables -A FORWARD -p tcp -d 192.168.50.11 --dport 80 -j ACCEPT
+разрешает системе пропускать TCP-пакеты, которые направляются к серверу 192.168.50.11 на порт 80. Без этого правила перенаправленный трафик может быть заблокирован фильтрующими правилами
+
+sudo iptables -A FORWARD -p tcp -s 192.168.50.11 --sport 80 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+разрешает обратный трафик от сервера, который приходит с порта 80. Она нужна, чтобы ответы внутреннего сервера могли беспрепятственно вернуться к клиенту через этот шлюз.
+
+
+нужен ещё и обратный NAT на выходе
+sudo iptables -t nat -A POSTROUTING -p tcp -d 192.168.50.11 --dport 80 -j MASQUERADE
+
+
+```
+
+![alt text](image-20.png)
+
+![alt text](image-21.png)
+
+![alt text](image-22.png)
+
+![alt text](image-23.png)
