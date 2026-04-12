@@ -13,7 +13,7 @@ Vagrant-стенд c OSPF
 
 
 
-1. Разворачиваем 3 виртуальные машины
+# 1. Разворачиваем 3 виртуальные машины
 
 Так как мы планируем настроить OSPF, все 3 виртуальные машины должны быть соединены между собой (разными VLAN), а также иметь одну (или несколько) доолнительных сетей, к которым, далее OSPF сформирует маршруты. Исходя из данных требований, мы можем нарисовать топологию сети:
 
@@ -31,50 +31,51 @@ Vagrant-стенд c OSPF
 # Установка пакетов для тестирования и настройки OSPF
 
 Перед настройкой FRR рекомендуется поставить базовые программы для изменения конфигурационных файлов (vim) и изучения сети (traceroute, tcpdump, net-tools):
-
+```
 sudo apt update
 
 sudo apt install vim traceroute tcpdump net-tools -y
-
+```
 # 2.1 Настройка OSPF между машинами на базе Quagga
 
 Пакет Quagga перестал развиваться в 2018 году. Ему на смену пришёл пакет FRR, он построен на базе Quagga и продолжает своё развитие. В данном руководстве настойка OSPF будет осуществляться в FRR. 
 
 Процесс установки FRR и настройки OSPF вручную:
-1) Отключаем файерволл ufw и удаляем его из автозагрузки:
 
+1) Отключаем файерволл ufw и удаляем его из автозагрузки:
+```
    sudo systemctl stop ufw 
 
    sudo systemctl disable ufw
-
+```
 ![alt text](image-1.png)
 
 2) Добавляем gpg ключ:
-
+```
    curl -s https://deb.frrouting.org/frr/keys.asc | sudo apt-key add -
-
+```
 3) Добавляем репозиторий c пакетом FRR:
-
+```
    echo "deb https://deb.frrouting.org/frr $(lsb_release -s -c) frr-stable" | sudo tee /etc/apt/sources.list.d/frr.list
 
    curl -s https://deb.frrouting.org/frr/keys.asc | sudo apt-key add -
 
    sudo apt update
 
-
+```
 4) Обновляем пакеты и устанавливаем FRR:
-
+```
    sudo apt update
    
    sudo apt install frr frr-pythontools
-
+```
 5) Разрешаем (включаем) маршрутизацию транзитных пакетов:
-
+```
 sudo sysctl net.ipv4.conf.all.forwarding=1
-
+```
 6) Включаем демон ospfd в FRR
 Для этого открываем в редакторе файл /etc/frr/daemons и меняем в нём параметры для пакетов zebra и ospfd на yes:
-
+```
 sudo vim /etc/frr/daemons
 
 zebra=yes
@@ -95,7 +96,7 @@ bfdd=no
 fabricd=no
 vrrpd=no
 pathd=no
-
+```
 В примере показана только часть файла
 
 ![alt text](image-2.png)
@@ -218,24 +219,25 @@ default-information originate always
 После создания файлов /etc/frr/frr.conf и /etc/frr/daemons нужно проверить, что владельцем файла является пользователь frr. Группа файла также должна быть frr. Должны быть установленны следующие права:
 у владельца на чтение и запись
 у группы только на чтение
-
+```
 ls -l /etc/frr
+```
 
 ![alt text](image-6.png)
 
 
 Если права или владелец файла указан неправильно, то нужно поменять владельца и назначить правильные права, например:
-
+```
 chown frr:frr /etc/frr/frr.conf 
 
 chmod 640 /etc/frr/frr.conf 
-
+```
 - Перезапускаем FRR и добавляем его в автозагрузку
-
+```
 systemctl restart frr
 
 systemctl enable frr
-
+```
 
 ![alt text](image-7.png)
 
@@ -312,9 +314,9 @@ router1#
 # 2.2 Настройка ассиметричного роутинга
 
 Для настройки ассиметричного роутинга нам необходимо выключить блокировку ассиметричной маршрутизации:
-
+```
 sysctl net.ipv4.conf.all.rp_filter=0
-
+```
 Далее, выбираем один из роутеров, на котором изменим «стоимость интерфейса». Например поменяем стоимость интерфейса eth1 на router1:
 
 ![alt text](image-12.png)
@@ -356,8 +358,9 @@ sysctl net.ipv4.conf.all.rp_filter=0
 Давайте это проверим:
 
 1) На router1 запускаем пинг от 192.168.10.1 до 192.168.20.1: 
+```
 ping -I 192.168.10.1 192.168.20.1
-
+```
 2) На router2 запускаем tcpdump, который будет смотреть трафик только на порту eth2:
 
 ![alt text](image-16.png)
